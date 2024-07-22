@@ -1,42 +1,27 @@
-from enum import Enum
-from typing import List
-
-from pydantic import BaseModel
-
-
-class RoomType(Enum):
-    standard: str = '3x3'
-    big: str = '19x19'
+from pydantic import BaseModel, Field
+from models import RedisRoom
+from datetime import datetime
 
 
 class CreateRoom(BaseModel):
-    type_room: RoomType
-    player_1: str
+    all_players: int = Field(..., ge=2, le=5)
+    player_name: str
+    player_first: int
+    size_x: int = Field(..., ge=3, le=20)
+    size_y: int = Field(..., ge=3, le=20)
+    condition_win: int = Field(..., ge=3, le=20)
 
 
 class JoinTheGame(BaseModel):
     key: int
-    player_2: str
+    player_name: str
 
 
-class HttpResult(BaseModel):
+class GameRoom(RedisRoom):
+    key: datetime
+
+
+class Response(BaseModel):
     result: str
     result_msg: str
-
-
-class GameRoom(BaseModel):
-    id: int
-    type_room: RoomType
-    game_field: List[int]
-    key: int
-    player_1: str
-    player_2: str
-    wins_first_user: int
-    wins_second_user: int
-    draws: int
-    game_status: str
-
-
-class Response(HttpResult):
     data: GameRoom | None = None
-
