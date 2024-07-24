@@ -1,10 +1,15 @@
-from fastapi import APIRouter, Depends
+from time import time
 import random
+import json
+
+from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
-from lobby.models import Room
-from database import get_db
-from lobby.schemas import RoomType, Response, GameRoom, CreateRoom, JoinTheGame
+
+from exceptions import HTTPExceptionEx
+from game import checking_the_created_field
+from lobby.schemas import Response, CreateRoom, JoinTheGame
+from database import redis_client, redis_get_value
+from models import RedisRoom
 
 router = APIRouter(
     prefix="/lobby",
@@ -12,49 +17,67 @@ router = APIRouter(
 )
 
 
-def make_dict(item: GameRoom) -> dict:
-    return {
-        'id': item.id,
-        'type_room': item.type_room,
-        'game_field': item.game_field,
-        'key': item.key,
-        'player_1': item.player_1,
-        'player_2': item.player_2,
-        'wins_first_user': item.wins_first_user,
-        'wins_second_user': item.wins_second_user,
-        'draws': item.draws,
-        'game_status': item.game_status
-    }
+def response(result: str, result_msg: str, data: dict = None) -> JSONResponse:
+    return JSONResponse({"result": result, "result_msg": result_msg, "data": data})
+
+
+def generate_key_playerfirst_and_floor(player_first: int, size_x: int, size_y: int, all_players: int):
+    player_first = random.randint(1, all_players) if player_first == 0 else player_first
+    game_floor = [[0] * size_x for _ in range(size_y)]
+    key = int(time() * 1000)
+    return key, player_first, game_floor
 
 
 @router.post("/create_game", response_model=Response)
-async def create_game(request: CreateRoom, db: Session = Depends(get_db)):
-    type_room = request.type_room
-    player_1 = request.player_1
-    game_field = []
-    if type_room == RoomType.standard:
-        game_field = [0] * 9
-    key = random.randint(100000000, 999999999)
-    db_item = Room(type_room=type_room.value,
-                   game_field=game_field,
-                   key=key,
-                   player_1=player_1,
-                   game_status='Waiting second player')
-    db.add(db_item)
-    db.commit()
-    db.refresh(db_item)
-    return JSONResponse({"result": "success", "result_msg": "Game created", "data": make_dict(db_item)}, 200)
+async def create_game(request: CreateRoom):
+    all_players = request.all_players
+    player_name = request.player_name
+    size_x = request.size_x
+    size_y = request.size_y
+    condition_win = request.condition_win
+    first = request.player_first
+
+    result = checking_the_created_field(all_players, size_x, size_y, condition_win)
+    if result:
+        raise HTTPExceptionEx(422, "Error", result)
+
+    key, player_first, game_floor = generate_key_playerfirst_and_floor(first,
+                                                                       size_x, size_y, all_players)
+
+    item = RedisRoom(all_players=all_players,
+                     players=[player_name],
+                     player_first=player_first,
+                     player_win='',
+                     floor=game_floor,
+                     size_x=size_x,
+                     size_y=size_y,
+                     condition_win=condition_win,
+                     moves=[]).__dict__
+    redis_client.set(f'game:{key}', json.dumps(item))
+    item['key'] = key
+
+    return response("Success", "Game created", item)
 
 
 @router.post("/join_the_game", response_model=Response)
-async def join_the_game(request: JoinTheGame, db: Session = Depends(get_db)):
+async def join_the_game(request: JoinTheGame):
     key = request.key
-    player_2 = request.player_2
-    item = db.query(Room).filter(Room.key == key).first()
-    if not item:
-        return JSONResponse({"result": "error", "result_msg": "Not found", "data": None}, 404)
-    item.player_2 = player_2
-    item.game_status = "Game start"
-    db.commit()
-    db.refresh(item)
-    return JSONResponse({"result": "success", "result_msg": "Joined game successfully", "data": make_dict(item)}, 200)
+    player_name = request.player_name
+    game_item = redis_get_value(key)
+    all_players = game_item['all_players']
+    players = len(game_item['players'])
+
+    if players == all_players:
+        return response("Warning", "In the game already the maximum number of players")
+
+    game_item['players'].append(player_name)
+    redis_client.set(f'game:{key}', json.dumps(game_item))
+
+    players = len(game_item['players'])
+    empty_places = all_players - players
+    game_item['key'] = key
+    if empty_places:
+        return response("Success", f"Joined room successfully. Waiting for {empty_places}", game_item)
+
+    return response("Success", f"Joined room successfully. Game started", game_item)
+

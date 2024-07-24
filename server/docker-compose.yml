@@ -6,6 +6,11 @@ services:
     env_file:
       - .env-non-dev
 
+  redis:
+    image: redis:7
+    container_name: redis_app
+    command: --port 6379
+
   app:
     build: .
     env_file:
@@ -16,3 +21,4 @@ services:
       - "8000:8000"
     depends_on:
       - db
+      - redis
