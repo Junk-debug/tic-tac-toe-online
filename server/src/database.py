@@ -1,5 +1,3 @@
-import json
-
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, MetaData
@@ -34,5 +32,5 @@ def redis_get_value(key):
     if not item:
         raise HTTPExceptionEx(424, "Error", "Not found")
 
-    json_str = json.loads(item.decode('utf-8'))
-    return json_str
+    decoded_str = item.decode('utf-8')
+    return decoded_str

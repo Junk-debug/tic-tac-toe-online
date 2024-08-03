@@ -15,13 +15,19 @@ class Room(Base):
     data = Column(JSONB, index=True)
 
 
+class Moves(BaseModel):
+    player: str
+    col: int
+    row: int
+
+
 class RedisRoom(BaseModel):
     all_players: int
-    players: List
+    players: List[str]
     player_first: int
     player_win: str
-    floor: List
+    floor: List[List[int]]
     size_x: int
     size_y: int
     condition_win: int
-    moves: List
+    moves: List[Moves]
