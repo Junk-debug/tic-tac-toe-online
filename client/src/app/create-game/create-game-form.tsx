@@ -110,7 +110,9 @@ const CreateGameForm = () => {
           />
         </CardContent>
         <CardFooter>
-          <Button onClick={handleSubmit(onSubmit)}>Create</Button>
+          <Button className="w-full" onClick={handleSubmit(onSubmit)}>
+            Create
+          </Button>
         </CardFooter>
       </Card>
     </Form>
