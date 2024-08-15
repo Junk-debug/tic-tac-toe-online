@@ -11,6 +11,7 @@
     "project": "./client/tsconfig.json"
   },
   "rules": {
-    "import/extensions": "never"
+    "import/extensions": "off",
+    "react/function-component-definition": "off"
   }
 }
