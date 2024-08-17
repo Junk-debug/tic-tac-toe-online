@@ -22,7 +22,7 @@ class Moves(BaseModel):
 
 
 class RedisRoom(BaseModel):
-    all_players: int
+    total_players: int
     players: List[str]
     player_first: int
     player_win: str

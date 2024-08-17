@@ -1,12 +1,6 @@
-from datetime import datetime
+from  typing import List
 
 from pydantic import BaseModel
-
-from models import RedisRoom
-
-
-class CheckRoom(BaseModel):
-    key: int
 
 
 class Move(BaseModel):
@@ -16,8 +10,9 @@ class Move(BaseModel):
     cell_row: int
 
 
-class GameRoom(RedisRoom):
-    key: datetime
+class GameRoom(BaseModel):
+    floor: List[List[int]]
+    now_move: str | None = None
 
 
 class Response(BaseModel):

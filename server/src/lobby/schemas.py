@@ -1,6 +1,6 @@
+from typing import List
+
 from pydantic import BaseModel, Field
-from models import RedisRoom
-from datetime import datetime
 
 
 class CreateRoom(BaseModel):
@@ -17,8 +17,10 @@ class JoinTheGame(BaseModel):
     player_name: str
 
 
-class GameRoom(RedisRoom):
-    key: datetime
+class GameRoom(BaseModel):
+    key: int
+    floor: List[List[int]]
+    now_move: str | None = None
 
 
 class Response(BaseModel):

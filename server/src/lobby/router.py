@@ -6,9 +6,10 @@ from fastapi.responses import JSONResponse
 
 from exceptions import HTTPExceptionEx
 from game import checking_the_created_field
-from lobby.schemas import Response, CreateRoom, JoinTheGame
+from lobby.schemas import Response, CreateRoom, JoinTheGame, GameRoom
 from database import redis_client, redis_get_value
 from models import RedisRoom
+from websockets_manager import manager
 
 router = APIRouter(
     prefix="/lobby",
@@ -16,7 +17,7 @@ router = APIRouter(
 )
 
 
-def response(result: str, result_msg: str, data: dict = None) -> JSONResponse:
+def response(result: str, result_msg: str, data = None) -> JSONResponse:
     return JSONResponse({"result": result, "result_msg": result_msg, "data": data})
 
 
@@ -42,7 +43,7 @@ async def create_game(request: CreateRoom):
 
     key, player_first, game_floor = generate_key_playerfirst_and_floor(first, size_x, size_y, all_players)
 
-    item_redis = RedisRoom(all_players=all_players,
+    item_redis = RedisRoom(total_players=all_players,
                            players=[player_name],
                            player_first=player_first,
                            player_win='',
@@ -51,32 +52,33 @@ async def create_game(request: CreateRoom):
                            size_y=size_y,
                            condition_win=condition_win,
                            moves=[])
-    redis_client.set(f'game:{key}', item_redis.json())
-
-    item_room = item_redis.dict()
-    item_room['key'] = key
-    return response("Success", "Game created", item_room)
+    redis_client.set(f'game:{key}', item_redis.model_dump_json())
+    room_item = GameRoom(key=key, floor=game_floor)
+    return response("Success", "Game created", room_item.model_dump())
 
 
 @router.post("/join_the_game", response_model=Response)
 async def join_the_game(request: JoinTheGame):
     key = request.key
     player_name = request.player_name
-    game_item = RedisRoom.parse_raw(redis_get_value(key))
-    all_players = game_item.all_players
+    game_item = RedisRoom.model_validate_json(redis_get_value(key))
+    total_players = game_item.total_players
     players = len(game_item.players)
 
-    if players == all_players:
+    if players == total_players:
         return response("Warning", "In the game already the maximum number of players")
 
     game_item.players.append(player_name)
-    redis_client.set(f'game:{key}', game_item.json())
+    redis_client.set(f'game:{key}', game_item.model_dump_json())
 
-    empty_places = all_players - players - 1
+    empty_places = total_players - players - 1
 
-    item_room = game_item.dict()
-    item_room['key'] = key
+    room_item = GameRoom(key=key, floor=game_item.floor)
+
     if empty_places:
-        return response("Success", f"Joined room successfully. Waiting for {empty_places}", item_room)
+        manager.broadcast(key, room_item)
+        return response("Success", f"Joined room successfully. Waiting for {empty_places}", room_item.model_dump())
 
-    return response("Success", f"Joined room successfully. Game started", item_room)
+    room_item.now_move = game_item.players[game_item.player_first-1]
+    manager.broadcast(key, room_item.now_move)
+    return response("Success", f"Joined room successfully. Game started", room_item.model_dump())

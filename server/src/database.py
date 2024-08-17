@@ -30,7 +30,7 @@ def redis_get_value(key):
     item = redis_client.get(f'game:{key}')
 
     if not item:
-        raise HTTPExceptionEx(424, "Error", "Not found")
+        raise HTTPExceptionEx(424, "Warning", "Not found")
 
     decoded_str = item.decode('utf-8')
     return decoded_str
