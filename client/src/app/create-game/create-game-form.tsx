@@ -36,11 +36,12 @@ import {
 import {
   CreateGameFormSchema,
   createGameFormSchema,
+  FieldSize,
 } from "./create-game-schema";
 
 const defaultValues: CreateGameFormSchema = {
   playerName: "",
-  fieldSize: "3x3",
+  fieldSize: FieldSize["3x3"],
 };
 
 const CreateGameForm = () => {
@@ -98,9 +99,11 @@ const CreateGameForm = () => {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="3x3">3x3</SelectItem>
-                    <SelectItem value="5x5">5x5</SelectItem>
-                    <SelectItem value="9x9">9x9</SelectItem>
+                    {Object.entries(FieldSize).map(([key, value]) => (
+                      <SelectItem key={key} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormDescription>Select the size of the field</FormDescription>
