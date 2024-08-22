@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from database import Base, engine
 from exceptions import HTTPExceptionEx
 from lobby.router import router as router_lobby
-from server.save.router import router as router_room
+from room.router import router as router_room
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
