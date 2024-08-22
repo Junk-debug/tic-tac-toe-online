@@ -19,6 +19,11 @@ class ConnectionManager:
         if key in self.active_connections:
             del self.active_connections[key]
 
+    @staticmethod
+    async def send_personal_message(message: dict, websocket: WebSocket):
+        json_message = json.dumps(message)
+        await websocket.send_text(json_message)
+
     async def broadcast(self, key: int, message: dict):
         if key in self.active_connections:
             json_message = json.dumps(message)

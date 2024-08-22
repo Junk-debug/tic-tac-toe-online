@@ -1,5 +1,3 @@
-from typing import List
-
 from pydantic import BaseModel, Field
 
 
@@ -17,13 +15,6 @@ class JoinTheGame(BaseModel):
     player_name: str
 
 
-class GameRoom(BaseModel):
-    key: int
-    floor: List[List[int]]
-    now_move: str | None = None
-
-
 class Response(BaseModel):
     result: str
     result_msg: str
-    data: GameRoom | None = None

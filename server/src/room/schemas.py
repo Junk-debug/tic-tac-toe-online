@@ -4,7 +4,6 @@ from pydantic import BaseModel
 
 
 class Move(BaseModel):
-    key: int
     player_name: str
     cell_col: int
     cell_row: int
