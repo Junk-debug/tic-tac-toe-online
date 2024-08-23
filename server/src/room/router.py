@@ -108,8 +108,10 @@ def create_message_after_connected(game_key: int) -> Response:
         result_msg += check_game_start(redis_item).result_msg
     else:
         now_move = redis_item.players[redis_item.player_first-1]
-        f"Game started Now it's {now_move}'s move"
+        result_msg += f"Game started Now it's {now_move}'s move"
         data.now_move = now_move
+    message.result_msg += result_msg
+    message.data = data
 
     return message
 
