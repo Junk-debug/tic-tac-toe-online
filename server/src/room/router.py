@@ -18,9 +18,9 @@ router = APIRouter(
 
 async def create_response(response: Response, websocket: WebSocket, key: int):
     if response.result == 'Warning':
-        await manager.send_personal_message(response, websocket)
+        await manager.send_personal_message(response.model_dump(), websocket)
     else:
-        await manager.broadcast(key, response)
+        await manager.broadcast(key, response.model_dump())
 
 
 def check_game_start(game: RedisRoom):
