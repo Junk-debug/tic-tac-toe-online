@@ -1,3 +1,5 @@
+from typing import List
+
 from pydantic import BaseModel, Field
 
 
@@ -17,6 +19,8 @@ class JoinTheGame(BaseModel):
 
 class Data(BaseModel):
     key: int
+    game_floor: List[List[int]]
+    now_move: str | None = None
 
 
 class Response(BaseModel):

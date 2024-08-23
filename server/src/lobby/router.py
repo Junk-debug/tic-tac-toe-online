@@ -53,7 +53,7 @@ async def create_game(request: CreateRoom):
                            moves=[])
     redis_client.set(f'game:{key}', item_redis.model_dump_json())
 
-    data = Data(key=key)
+    data = Data(key=key, game_floor=game_floor)
     return response("Success", "Game created", data.model_dump())
 
 
@@ -63,20 +63,21 @@ async def join_the_game(request: JoinTheGame):
     player_name = request.player_name
     game_item = RedisRoom.model_validate_json(redis_get_value(key))
     total_players = game_item.total_players
-    players = len(game_item.players)
+    players = game_item.players
 
-    data = Data(key=key)
-
-    if players == total_players:
+    if len(players) == total_players:
         return response("Warning", "In the game already the maximum number of players")
+
+    data = Data(key=key, game_floor=game_item.floor)
 
     game_item.players.append(player_name)
     redis_client.set(f'game:{key}', game_item.model_dump_json())
 
-    empty_places = total_players - players - 1
+    empty_places = total_players - len(players)
 
 
     if empty_places:
         return response("Success", f"Joined room successfully. Waiting for {empty_places}", data.model_dump())
 
+    data.now_move = players[game_item.player_first-1]
     return response("Success", f"Joined room successfully. Game started", data.model_dump())
