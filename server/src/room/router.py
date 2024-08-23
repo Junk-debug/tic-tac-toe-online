@@ -86,7 +86,6 @@ def move(key: int, request: Move, db: Session = Depends(get_db)):
         game_state.now_move = next_player
 
         redis_client.set(f'game:{key}', game_data.model_dump_json())
-        print(game_state)
         return Response(result="Success", result_msg="The game continues", data=game_state)
     else:
         game_data.player_win = 'Draw' if winner == 'Draw' else players[winner - 1]
@@ -108,7 +107,7 @@ def create_message_after_connected(game_key: int) -> Response:
         result_msg += check_game_start(redis_item).result_msg
     else:
         now_move = redis_item.players[redis_item.player_first-1]
-        result_msg += f"Game started Now it's {now_move}'s move"
+        result_msg += f"Game started. Now it's {now_move}'s move"
         data.now_move = now_move
     message.result_msg += result_msg
     message.data = data
