@@ -51,8 +51,7 @@ def determine_next_move(moves: list, players: list, first_player_index: int):
     return next_player
 
 
-def move(request: Move, db: Session = Depends(get_db)):
-    key = request.key
+def move(key, request: Move, db: Session = Depends(get_db)):
     player = request.player_name
     col = request.cell_col
     row = request.cell_row
@@ -108,7 +107,7 @@ async def websocket_endpoint(websocket: WebSocket, game_key: int):
         while True:
             data = await websocket.receive_text()
             item = Move.model_validate_json(data)
-            response = move(item)
+            response = move(game_key, item)
             await create_response(response, websocket, game_key)
     except WebSocketDisconnect:
         await manager.disconnect(game_key, websocket)
