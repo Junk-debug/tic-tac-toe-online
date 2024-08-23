@@ -100,7 +100,7 @@ def move(key: int, request: Move, db: Session = Depends(get_db)):
         return check_game_end("Success", game_data)
 
 def create_message_after_connected(game_key: int) -> Response:
-    redis_item = RedisRoom.model_validate_json(redis_client.get(game_key))
+    redis_item = RedisRoom.model_validate_json(redis_get_value(game_key))
     message = Response(result='Success')
     result_msg = f'{redis_item.players[-1]} joined. '
     data = Data(game_floor=redis_item.floor)
