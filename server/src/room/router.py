@@ -107,7 +107,7 @@ async def websocket_endpoint(websocket: WebSocket, game_key: int):
     try:
         while True:
             data = await websocket.receive_text()
-            item = Move.model_validate_json(json.loads(data))
+            item = Move.model_validate_json(data)
             response = move(item)
             await create_response(response, websocket, game_key)
     except WebSocketDisconnect:
