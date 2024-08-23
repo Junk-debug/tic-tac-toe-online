@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db, redis_client, redis_get_value
 from models import Room, RedisRoom, Moves
-from room.schemas import Response, Move, GameRoom
+from room.schemas import Response, Move, Data
 from game import check_winner
 from room.websockets_manager import manager
 
@@ -32,7 +32,7 @@ def check_game_start(game: RedisRoom):
 
 def check_game_end(status: str, game: RedisRoom):
     winner = game.player_win
-    game_data = GameRoom(floor=game.floor)
+    game_data = Data(game_floor=game.floor)
 
     if winner:
         if winner == 'Draw':
@@ -49,7 +49,8 @@ def determine_next_move(moves: list, players: list, first_player_index: int):
     return next_player
 
 
-def move(key, request: Move, db: Session = Depends(get_db)):
+@router.post('/')
+def move(key: int, request: Move, db: Session = Depends(get_db)):
     player = request.player_name
     col = request.cell_col
     row = request.cell_row
@@ -69,14 +70,13 @@ def move(key, request: Move, db: Session = Depends(get_db)):
     if  next_player != player:
         return Response(result="Warning", result_msg="It's not your turn")
 
-    game_state = GameRoom(floor=game_data.floor, now_move=next_player)
+    game_state = Data(game_floor=game_data.floor, now_move=next_player)
 
     if game_data.floor[row][col]:
         return Response(result="Warning", result_msg="This cell is already occupied")
 
-
     game_data.floor[row][col] = players.index(next_player) + 1
-    game_state.floor = game_data.floor
+    game_state.game_floor = game_data.floor
     game_data.moves.append(Moves(player=player, col=col, row=row))
 
     winner = check_winner(game_data.floor, game_data.size_x, game_data.size_y, game_data.condition_win)
@@ -86,7 +86,8 @@ def move(key, request: Move, db: Session = Depends(get_db)):
         game_state.now_move = next_player
 
         redis_client.set(f'game:{key}', game_data.model_dump_json())
-        return Response(result="Success", rsult_msg="The game continues", data=game_state.model_dump())
+        print(game_state)
+        return Response(result="Success", result_msg="The game continues", data=game_state)
     else:
         game_data.player_win = 'Draw' if winner == 'Draw' else players[winner - 1]
         redis_client.set(f'game:{key}', game_data.model_dump_json())
@@ -98,9 +99,26 @@ def move(key, request: Move, db: Session = Depends(get_db)):
 
         return check_game_end("Success", game_data)
 
+def create_message_after_connected(game_key: int) -> Response:
+    redis_item = RedisRoom.model_validate_json(redis_client.get(game_key))
+    message = Response(result='Success')
+    result_msg = f'{redis_item.players[-1]} joined. '
+    data = Data(game_floor=redis_item.floor)
+    if check_game_start(redis_item):
+        result_msg += check_game_start(redis_item).result_msg
+    else:
+        now_move = redis_item.players[redis_item.player_first-1]
+        f"Game started Now it's {now_move}'s move"
+        data.now_move = now_move
+
+    return message
+
+
 @router.websocket("/ws/{game_key}")
 async def websocket_endpoint(websocket: WebSocket, game_key: int):
     await manager.connect(game_key, websocket)
+    message = create_message_after_connected(game_key)
+    await create_response(message, websocket, game_key)
     try:
         while True:
             data = await websocket.receive_text()

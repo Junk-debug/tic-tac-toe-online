@@ -9,12 +9,12 @@ class Move(BaseModel):
     cell_row: int
 
 
-class GameRoom(BaseModel):
-    floor: List[List[int]]
+class Data(BaseModel):
+    game_floor: List[List[int]]
     now_move: str | None = None
 
 
 class Response(BaseModel):
     result: str
     result_msg: str
-    data: GameRoom | None = None
+    data: Data | None = None
