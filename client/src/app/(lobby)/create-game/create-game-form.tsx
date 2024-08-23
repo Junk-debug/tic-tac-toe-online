@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -38,20 +39,76 @@ import {
   createGameFormSchema,
   FieldSize,
 } from "./create-game-schema";
+import { useGameStore } from "@/app/game-store";
 
 const defaultValues: CreateGameFormSchema = {
   playerName: "",
   fieldSize: FieldSize["3x3"],
 };
 
+type CreateGameDto = {
+  all_players: number;
+  player_name: string;
+  player_first: 0 | 1 | 2;
+  size_x: number;
+  size_y: number;
+  condition_win: number;
+};
+
+type CreateGameResponse = {
+  data: {
+    key: number;
+    game_floor: number[][];
+    now_move: string | null;
+  };
+  result: string;
+  result_msg: string;
+};
+
+const createGame = async (params: CreateGameDto) => {
+  const res = await fetch("http://localhost:8000/lobby/create_game", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(params),
+  });
+
+  const data: CreateGameResponse = await res.json();
+  return data;
+};
+
 const CreateGameForm = () => {
+  const router = useRouter();
+
+  const updateGameState = useGameStore((state) => state.updateGameState);
+
   const form = useForm<CreateGameFormSchema>({
     resolver: zodResolver(createGameFormSchema),
     defaultValues,
   });
 
-  function onSubmit(values: CreateGameFormSchema) {
-    console.log(values);
+  async function onSubmit(values: CreateGameFormSchema) {
+    const res = await createGame({
+      all_players: 2,
+      player_name: values.playerName,
+      player_first: 0,
+      size_x: Number(values.fieldSize[0]),
+      size_y: Number(values.fieldSize[0]),
+      condition_win: 3,
+    });
+
+    updateGameState({
+      key: res.data.key,
+      playerName: values.playerName,
+      field: res.data.game_floor,
+      currentMove: res.data.now_move,
+    });
+
+    console.log(res);
+    console.log(res.data.key);
+
+    router.push("/test");
   }
 
   const { handleSubmit, control } = form;

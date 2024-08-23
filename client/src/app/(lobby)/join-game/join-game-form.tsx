@@ -3,6 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,20 +26,68 @@ import {
 } from "@/components/ui/form";
 
 import { joinGameFormSchema, JoinGameFormSchema } from "./join-game-schema";
+import { useGameStore } from "@/app/game-store";
 
 const defaultValues: JoinGameFormSchema = {
   playerName: "",
   key: "",
 };
 
+type JoinGameDto = {
+  key: number;
+  player_name: string;
+};
+
+type JoinGameResponse = {
+  data: {
+    key: number;
+    game_floor: number[][];
+    now_move: string | null;
+  };
+  result: string;
+  result_msg: string;
+};
+
+const joinGame = async (params: JoinGameDto) => {
+  const res = await fetch("http://localhost:8000/lobby/join_the_game", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(params),
+  });
+  const data: JoinGameResponse = await res.json();
+  return data;
+};
+
 const JoinGameForm = () => {
+  const router = useRouter();
+  const updateGameState = useGameStore((state) => state.updateGameState);
+
   const form = useForm<JoinGameFormSchema>({
     resolver: zodResolver(joinGameFormSchema),
     defaultValues,
   });
 
-  const onSubmit = (values: JoinGameFormSchema) => {
+  const onSubmit = async (values: JoinGameFormSchema) => {
     console.log(values);
+
+    const res = await joinGame({
+      key: Number(values.key),
+      player_name: values.playerName,
+    });
+
+    updateGameState({
+      key: res.data.key,
+      playerName: values.playerName,
+      field: res.data.game_floor,
+      currentMove: res.data.now_move,
+    });
+
+    console.log(res);
+    console.log(res.data.key);
+
+    router.push("/test");
   };
 
   const { handleSubmit, control } = form;
