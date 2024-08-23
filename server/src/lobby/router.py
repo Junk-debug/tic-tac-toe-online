@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from exceptions import HTTPExceptionEx
 from game import checking_the_created_field
-from lobby.schemas import Response, CreateRoom, JoinTheGame
+from lobby.schemas import Response, CreateRoom, JoinTheGame, Data
 from database import redis_client, redis_get_value
 from models import RedisRoom
 
@@ -16,8 +16,8 @@ router = APIRouter(
 )
 
 
-def response(result: str, result_msg: str) -> JSONResponse:
-    return JSONResponse({"result": result, "result_msg": result_msg})
+def response(result: str, result_msg: str, data: dict = None) -> JSONResponse:
+    return JSONResponse({"result": result, "result_msg": result_msg, 'data': data})
 
 
 def generate_key_playerfirst_and_floor(player_first: int, size_x: int, size_y: int, all_players: int):
@@ -52,7 +52,9 @@ async def create_game(request: CreateRoom):
                            condition_win=condition_win,
                            moves=[])
     redis_client.set(f'game:{key}', item_redis.model_dump_json())
-    return response("Success", "Game created")
+
+    data = Data(key=key)
+    return response("Success", "Game created", data.model_dump())
 
 
 @router.post("/join_the_game", response_model=Response)
@@ -62,6 +64,8 @@ async def join_the_game(request: JoinTheGame):
     game_item = RedisRoom.model_validate_json(redis_get_value(key))
     total_players = game_item.total_players
     players = len(game_item.players)
+
+    data = Data(key=key)
 
     if players == total_players:
         return response("Warning", "In the game already the maximum number of players")
@@ -73,6 +77,6 @@ async def join_the_game(request: JoinTheGame):
 
 
     if empty_places:
-        return response("Success", f"Joined room successfully. Waiting for {empty_places}")
+        return response("Success", f"Joined room successfully. Waiting for {empty_places}", data.model_dump())
 
-    return response("Success", f"Joined room successfully. Game started")
+    return response("Success", f"Joined room successfully. Game started", data.model_dump())

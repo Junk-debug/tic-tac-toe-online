@@ -15,6 +15,11 @@ class JoinTheGame(BaseModel):
     player_name: str
 
 
+class Data(BaseModel):
+    key: int
+
+
 class Response(BaseModel):
     result: str
     result_msg: str
+    data: Data | None = None
