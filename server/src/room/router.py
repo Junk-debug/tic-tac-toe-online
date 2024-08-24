@@ -50,7 +50,7 @@ def determine_next_move(moves: list, players: list, first_player_index: int):
 
 
 @router.post('/')
-def move(key: int, request: Move, db: Session = Depends(get_db)):
+def move(key: int, request: Move, db):
     player = request.player_name
     col = request.cell_col
     row = request.cell_row
@@ -116,7 +116,7 @@ def create_message_after_connected(game_key: int) -> Response:
 
 
 @router.websocket("/ws/{game_key}")
-async def websocket_endpoint(websocket: WebSocket, game_key: int):
+async def websocket_endpoint(websocket: WebSocket, game_key: int, db: Session = Depends(get_db)):
     await manager.connect(game_key, websocket)
     message = create_message_after_connected(game_key)
     await create_response(message, websocket, game_key)
@@ -124,7 +124,7 @@ async def websocket_endpoint(websocket: WebSocket, game_key: int):
         while True:
             data = await websocket.receive_text()
             item = Move.model_validate_json(data)
-            response = move(game_key, item)
+            response = move(game_key, item, db)
             await create_response(response, websocket, game_key)
     except WebSocketDisconnect:
         await manager.disconnect(game_key, websocket)
